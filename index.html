@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Saran Siswa SMP YKTB</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(to bottom, #0a0e27 0%, #1a1f4d 50%, #2d3561 100%);
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        #canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .title {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            font-size: 28px;
+            font-weight: bold;
+            text-align: center;
+            z-index: 10;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
+        }
+
+        .subtitle {
+            position: absolute;
+            top: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #aab4e8;
+            font-size: 16px;
+            text-align: center;
+            z-index: 10;
+        }
+
+        .star {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: white;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+        }
+
+        .star:hover {
+            transform: scale(3);
+            box-shadow: 0 0 30px rgba(255, 215, 0, 1);
+            background: gold;
+            z-index: 100;
+        }
+
+        .tooltip {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.95);
+            color: #333;
+            padding: 15px 20px;
+            border-radius: 10px;
+            font-size: 14px;
+            max-width: 300px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 1000;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+            border: 2px solid gold;
+        }
+
+        .tooltip.show {
+            opacity: 1;
+        }
+
+        .tooltip .guru {
+            font-weight: bold;
+            color: #0066cc;
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+
+        .tooltip .saran {
+            line-height: 1.5;
+        }
+
+        .shooting-star {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background: white;
+            border-radius: 50%;
+            box-shadow: 0 0 10px white;
+        }
+
+        .counter {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            color: white;
+            font-size: 14px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px 20px;
+            border-radius: 20px;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+    <div class="title">✨ Saran Siswa SMP YKTB ✨</div>
+    <div class="subtitle">Sentuh bintang untuk membaca saran</div>
+    <canvas id="canvas"></canvas>
+    <div class="tooltip" id="tooltip">
+        <div class="guru"></div>
+        <div class="saran"></div>
+    </div>
+    <div class="counter"><span id="starCount">0</span> Saran</div>
+
+    <script>
+        const saranData = [
+            { guru: "Bu Balkis", saran: "Lebih maju jangan ketat-ketat banget, jam pulang cepetin biar pulang ga cape" },
+            { guru: "Bu Neni", saran: "Lebih majuu, jangan ketat banget jam pulang cepetin biar plgnya ga cape" },
+            { guru: "Bu Marina", saran: "Terima kasih sudah membimbing kita bu" },
+            { guru: "Bu Iin", saran: "Saya ingin masuk ke kelas pake sepatu" },
+            { guru: "Bu Puspita", saran: "Semoga lebih baik" },
+            { guru: "Bu Balkis", saran: "Pulang lebih cepat" },
+            { guru: "Bu Balkis", saran: "Pulng jangan siang, biar pulng ga cape and panas, boleh maen hp" },
+            { guru: "Bu Neni", saran: "Lebih tertib daripada sebelumnya" },
+            { guru: "Bu Balkis", saran: "Pulang cepatin biar ga cape, lebih maju jangan ketat" },
+            { guru: "Bu Puspita", saran: "Plis ilangin piket panca waluya, capek. Semoga yktb bisa ikutan lomba-lomba dan menang" },
+            { guru: "Bu Balkis", saran: "Maju untuk sekolah" },
+            { guru: "Bu Marina", saran: "Lebih bagusin lagi sekolah nya" },
+            { guru: "Bu Iin", saran: "Bikin lift" },
+            { guru: "Bu Balkis", saran: "Lebih asik lagi gurunya" },
+            { guru: "Bu Puspita", saran: "Fasilitas, pengajaran, dan semoga kedepannya lebih baik" },
+            { guru: "Bu Ema", saran: "Semoga yktb kedepannya jadi lebih baik" },
+            { guru: "Bu Intan", saran: "Semoga kedepannya yktb makin jaya, makin banyak siswa/i nya, dan semoga kedepannya di yktb ngaji nya lebih ketat" },
+            { guru: "Pak Helmy", saran: "Saran hp gausah di kumpulin soalnya buat apa di kumpulin?" },
+            { guru: "Bu Neni", saran: "Memajukan nama baik sekolah" },
+            { guru: "Bu Putri", saran: "Karna Bu putri guru yg paling seru and se frekuensi, tapi semua guru aku sukaa" },
+            { guru: "Pak Helmy", saran: "Sekolah nya ramah baik tapi sayang nya banyak sampah" },
+            { guru: "Bu Putri", saran: "Memajukan nama baik sekolah SMP Yktb" },
+            { guru: "Pak Helmy", saran: "Lebih asik aja abis belajar bisa main komputer" },
+            { guru: "Bu Ema", saran: "Ingin menjaga nama baik sekolah" },
+            { guru: "Bu Iin", saran: "Semoga gurunya makin asik" },
+            { guru: "Pak Bowo", saran: "Semoga lebih baik dan lebih sabar menghadapi murid nya" },
+            { guru: "Bu Putri", saran: "Ingin memajukan nama baik sekolah" },
+            { guru: "Bu Marina", saran: "Ilangin piket panca waluya" },
+            { guru: "Bu Putri", saran: "Mudah mudahan sekolah ini bisa terus maju, dan menginspirasi banyak siswa untuk giat belajar" },
+            { guru: "Bu Marina", saran: "Jamkos banyakin" },
+            { guru: "Bu Titi", saran: "Mudah mudahan sekolah ini tetap jaya dan lebih baik kedepannya" },
+            { guru: "Bu Puspita", saran: "Harapan buat sekolah, semoga makin maju dan bagus" },
+            { guru: "Pak Helmy", saran: "Sekolah sebaiknya lebih sering mengadakan kegiatan yang mengasah kreativitas siswa, seperti lomba inovasi, pameran karya, atau pelatihan keterampilan" },
+            { guru: "Bu Balkis", saran: "Kegiatan harus teratur dan pulang harus cepet karena anak butuh istirahat yang teratur" },
+            { guru: "Bu Putri", saran: "Harapan aku kedepannya semoga guru guru bisa lebih baik lagi dan lebih konsisten lagi" },
+            { guru: "Pak Bowo", saran: "Semoga sekolahan ini menjadi lebih baik lagi" },
+            { guru: "Bu Marina", saran: "Semoga sekolah ini bisa lebih maju, dan untuk guru favorit aku semoga ibu sukses dan lebih sabar lagi dalam mengajar kita" },
+            { guru: "Bu Marina", saran: "Yktb bagus, gurunya pada baik tapi mungkin ada yang engga dan juga kepala sekolahnya baik" },
+            { guru: "Bu Intan", saran: "Lebih bagus dan lebih maju lagi" },
+            { guru: "Bu Iin", saran: "Memajukan nama baik sekolah" },
+            { guru: "Bu Putri", saran: "Harapannya sekolah ini menjadikan anak anak yang baik dan tidak nakal" },
+            { guru: "Bu Puspita", saran: "Harapan buat sekolah semakin bagus dan semakin lengkap fasilitasnya" },
+            { guru: "Bu Putri", saran: "Gaada kritik nya aku suka sekola ini, tapi lingkungan pertemanan aja si" },
+            { guru: "Bu Intan", saran: "Tolong yang pacaran suruh pada putus, apalagi mereka yang punya jabatan" },
+            { guru: "Bu Balkis", saran: "Harapan aku, aku ingin lebih giat sekolah" },
+            { guru: "Bu Putri", saran: "Maju terus" },
+            { guru: "Bu Balkis", saran: "Pulang cepat setiap hari" },
+            { guru: "Bu Neni", saran: "Harapan aku ngaji nya lebih sering dan lama" },
+            { guru: "Bu Putri", saran: "Sekolah harus mengadakan acara yang melatih kreatifitas siswa" },
+            { guru: "Bu Marina", saran: "Adain jendela sama pintu kelas" },
+            { guru: "Bu Neni", saran: "Harapan buat sekolah semoga sekolahnya makin maju, semakin baik untuk ke depannya" },
+            { guru: "Bu Putri", saran: "Sekolah menjadi lebih bagus dan ramah lingkungan" },
+            { guru: "Bu Ema", saran: "Semoga sekolah yktb makin maju" },
+            { guru: "Bu Marina", saran: "Jangan lupa ikutin class meeting" },
+            { guru: "Bu Ema", saran: "Sekolah di smp yktb banyak temen" },
+            { guru: "Bu Neni", saran: "Harapannya sekolah yktb bisa lebih memperhatikan lagi anak-anaknya, terlebih lagi masalah pembullyan" },
+            { guru: "Pak Helmy", saran: "Semoga pak Helmi menjadi semakin ganteng dan sehat selalu" },
+            { guru: "Bu Neni", saran: "Harapan buat sekolah, semoga makin bagus dan maju dan semoga anak-anaknya bisa menjadi disiplin dan lebih baik lagi" },
+            { guru: "Bu Marina", saran: "Ruang kelas kipasnya betulin soalnya panas adain pintu kelas" },
+            { guru: "Pak Hedy", saran: "Semoga ke depan sekolah bisa bikin suasana belajar lebih seru dan nggak ngebosenin, terus fasilitas kayak toilet, kelas, dan lapangan bisa lebih diperhatiin" },
+            { guru: "Bu Putri", saran: "Semoga sekolah menjadi tempat yang nyaman" },
+            { guru: "Bu Iin", saran: "Harapan aku setiap hari selalu ngaji karena ngaji itu seru dan bisa membantu buat orang yang belum bisa baca huruf" },
+            { guru: "Bu Putri", saran: "Sekolah menjadi lebih bagus dan lingkungannya menjadi lebih bagus" },
+            { guru: "Bu Putri", saran: "Harapannya sekolah ini menjadikan anak anak disini menjadi anak yang baik dan tidak nakal dan kritiknya setiap guru kalo mengajar jangan galak galak" },
+            { guru: "Bu Marina", saran: "Pulang cepet" },
+            { guru: "Bu Balkis", saran: "Harapannya sekolah lebih baik lagi kedepannya" },
+            { guru: "Bu Marina", saran: "Adain meja baru" },
+            { guru: "Bu Intan", saran: "Anak-anak nya dapat di atur dengan mudah" },
+            { guru: "Bu Putri", saran: "Aku mau sekolah ini ngajinya makin rajin dan semoga gurunya lebih sabar menghadapi kita dan semoga lingkungan di sini terhindar dari hal negatif" },
+            { guru: "Bu Marina", saran: "Semoga smp bersih dan nyaman" },
+            { guru: "Bu Putri", saran: "Di perbolehkan membawa makanan keatas" },
+            { guru: "Bu Iin", saran: "Hari jumat pulangnya cepet, ngajinya pengen iqro 4" },
+            { guru: "Bu Neni", saran: "Tolong kalo ada orang yang pake make up kaya tante-tante di tegur terus di suruh hapus" },
+            { guru: "Pak Helmy", saran: "Harapannya sekolah ini lebih bersih bagus baik" },
+            { guru: "Bu Neni", saran: "Istirahatnya di perlama" },
+            { guru: "Bu Neni", saran: "Supaya SMP YKTB makin baik" },
+            { guru: "Pak Helmy", saran: "Please be nice to your students. Sholat duha 2 kali seminggu! Tambahin English Day hari Jumat plsss" },
+            { guru: "Bu Ema", saran: "Bu Emma lucu dan suka ngehibur mulu" },
+            { guru: "Bu Marina", saran: "Adain pintu sama kipas angin" },
+            { guru: "Bu Balkis", saran: "Semoga jadi lebih baik" },
+            { guru: "Bu Putri", saran: "Pulang cepet" },
+            { guru: "Bu Putri", saran: "Bu Putri baik hati ceria cantik orangnya suka beri masukan pelajaran yang kita tidak mengerti" },
+            { guru: "Bu Neni", saran: "Harapan saya bisa membanggakan nama sekolah ketika sukses nanti, kritik dari saya kamar mandi bau" },
+            { guru: "Bu Ema", saran: "Guru baik walaupun suka marah-marah kalo muridnya bandel" },
+            { guru: "Bu Neni", saran: "Semakin maju untuk yktb" },
+            { guru: "Bu Marina", saran: "Ramah baik konsisten" },
+            { guru: "Bu Marina", saran: "Fokus dalam mengajar" },
+            { guru: "Pak Helmy", saran: "Ganti lantai sekolah!" },
+            { guru: "Bu Putri", saran: "Pulang lebih cepat setiap hari dari Senin sampai Jumat" },
+            { guru: "Pak Bowo", saran: "Semoga smp yktb era baru semakin maju" },
+            { guru: "Pak Bowo", saran: "Tambahin pintu" },
+            { guru: "Pak Bowo", saran: "Menjadi lebih baik dan semoga lebih sabar ngadepin murid muridnya" },
+            { guru: "Bu Balkis", saran: "Harapan aku adalah semoga nilai ujian/ulangan aku ga di bawah kkm" },
+            { guru: "Bu Balkis", saran: "Harapan aku semoga yktb bisa pulang cepet kaya sekolah laen" },
+            { guru: "Bu Iin", saran: "Harapan aku semoga toilet yktb selalu bersih dan jangan ada binatang yang bikin semua anak yktb geli" },
+            { guru: "Bu Iin", saran: "Harapan aku adalah semoga diantara guru laen bu lin lah yang paling pengertian dan juga bu balqis" },
+            { guru: "Bu Putri", saran: "Sekolah udah lumayan berubah cuman masih ada beberapa fasilitas yang ga terlalu keurus, contohnya kaya kamar mandi atas" },
+            { guru: "Pak Helmy", saran: "Karena pak helmy ngajarin Coding" },
+            { guru: "Bu Ema", saran: "Baik dan juga seru kalo belajar" },
+            { guru: "Bu Balkis", saran: "Sukses terus untuk SMP YKTB" },
+            { guru: "Bu Balkis", saran: "Pulang cepet setiap hari jumat" },
+            { guru: "Bu Balkis", saran: "Supaya lebih maju lagi" },
+            { guru: "Bu Iin", saran: "Pulang lebih cepat" },
+            { guru: "Bu Balkis", saran: "Pulang cepat" },
+            { guru: "Pak Bowo", saran: "YKTB bagus tetap di hati" }
+        ];
+
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const tooltip = document.getElementById('tooltip');
+        const starCount = document.getElementById('starCount');
+        
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const stars = [];
+        
+        // Create stars
+        saranData.forEach((data, index) => {
+            const star = {
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                size: Math.random() * 2 + 1,
+                twinkleSpeed: Math.random() * 0.02 + 0.01,
+                opacity: Math.random(),
+                data: data
+            };
+            stars.push(star);
+        });
+
+        starCount.textContent = stars.length;
+
+        // Shooting stars
+        const shootingStars = [];
+        
+        function createShootingStar() {
+            const shootingStar = {
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height * 0.5,
+                speedX: Math.random() * 5 + 3,
+                speedY: Math.random() * 3 + 2,
+                length: Math.random() * 80 + 40,
+                opacity: 1
+            };
+            shootingStars.push(shootingStar);
+        }
+
+        setInterval(createShootingStar, 3000);
+
+        // Animation
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw stars
+            stars.forEach(star => {
+                star.opacity += star.twinkleSpeed;
+                if (star.opacity > 1 || star.opacity < 0.3) {
+                    star.twinkleSpeed *= -1;
+                }
+                
+                ctx.beginPath();
+                ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(255, 255, 255, ${star.opacity})`;
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = 'white';
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            });
+            
+            // Draw shooting stars
+            shootingStars.forEach((ss, index) => {
+                ctx.beginPath();
+                ctx.moveTo(ss.x, ss.y);
+                ctx.lineTo(ss.x - ss.length, ss.y - ss.length * 0.5);
+                ctx.strokeStyle = `rgba(255, 255, 255, ${ss.opacity})`;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                ss.x += ss.speedX;
+                ss.y += ss.speedY;
+                ss.opacity -= 0.01;
+                
+                if (ss.opacity <= 0) {
+                    shootingStars.splice(index, 1);
+                }
+            });
+            
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+
+        // Mouse interaction
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            
+            let hoveredStar = null;
+            
+            stars.forEach(star => {
+                const distance = Math.sqrt((mouseX - star.x) ** 2 + (mouseY - star.y) ** 2);
+                if (distance < 15) {
+                    hoveredStar = star;
+                }
+            });
+            
+            if (hoveredStar) {
+                canvas.style.cursor = 'pointer';
+                tooltip.querySelector('.guru').textContent = hoveredStar.data.guru;
+                tooltip.querySelector('.saran').textContent = hoveredStar.data.saran;
+                tooltip.style.left = e.clientX + 20 + 'px';
+                tooltip.style.top = e.clientY + 20 + 'px';
+                tooltip.classList.add('show');
+            } else {
+                canvas.style.cursor = 'default';
+                tooltip.classList.remove('show');
+            }
+        });
+
+        canvas.addEventListener('mouseleave', () => {
+            tooltip.classList.remove('show');
+        });
+
+        // Resize handler
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+    </script>
+</body>
+</html>
