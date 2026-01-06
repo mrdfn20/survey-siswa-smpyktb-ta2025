@@ -92,7 +92,13 @@
             font-weight: bold;
             color: #0066cc;
             margin-bottom: 8px;
-            font-size: 12px;
+            font-size: 13px;
+        }
+        
+        .tooltip .guru::before {
+            content: "👨‍🏫 Guru favoritku: ";
+            font-weight: normal;
+            color: #666;
         }
 
         .tooltip .saran {
@@ -119,6 +125,56 @@
             border-radius: 20px;
             z-index: 10;
         }
+
+        .audio-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            z-index: 10;
+            display: flex;
+            gap: 10px;
+        }
+
+        .audio-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .audio-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+
+        .audio-btn.active {
+            background: rgba(255, 215, 0, 0.3);
+            border-color: gold;
+        }
+
+        .upload-label {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .upload-label:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+
+        input[type="file"] {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -130,6 +186,15 @@
         <div class="saran"></div>
     </div>
     <div class="counter"><span id="starCount">0</span> Saran</div>
+    
+    <div class="audio-controls">
+        <label for="bgMusicUpload" class="upload-label">🎵 Upload Musik</label>
+        <input type="file" id="bgMusicUpload" accept="audio/*">
+        <button class="audio-btn" id="toggleMusic">⏸️ Pause</button>
+        <button class="audio-btn" id="toggleSfx">🔊 SFX: ON</button>
+    </div>
+    
+    <audio id="bgMusic" loop></audio>
 
     <script>
         const saranData = [
@@ -244,9 +309,70 @@
         const ctx = canvas.getContext('2d');
         const tooltip = document.getElementById('tooltip');
         const starCount = document.getElementById('starCount');
+        const bgMusic = document.getElementById('bgMusic');
+        const bgMusicUpload = document.getElementById('bgMusicUpload');
+        const toggleMusic = document.getElementById('toggleMusic');
+        const toggleSfx = document.getElementById('toggleSfx');
+        
+        let sfxEnabled = true;
+        let currentHoveredStar = null;
         
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
+
+        // Create a simple hover sound effect using Web Audio API
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        
+        function playHoverSound() {
+            if (!sfxEnabled) return;
+            
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.value = 800;
+            oscillator.type = 'sine';
+            
+            gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.1);
+        }
+        
+        // Background music upload handler
+        bgMusicUpload.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const url = URL.createObjectURL(file);
+                bgMusic.src = url;
+                bgMusic.play();
+                toggleMusic.textContent = '⏸️ Pause';
+                toggleMusic.classList.add('active');
+            }
+        });
+        
+        // Toggle music
+        toggleMusic.addEventListener('click', () => {
+            if (bgMusic.paused) {
+                bgMusic.play();
+                toggleMusic.textContent = '⏸️ Pause';
+                toggleMusic.classList.add('active');
+            } else {
+                bgMusic.pause();
+                toggleMusic.textContent = '▶️ Play';
+                toggleMusic.classList.remove('active');
+            }
+        });
+        
+        // Toggle sound effects
+        toggleSfx.addEventListener('click', () => {
+            sfxEnabled = !sfxEnabled;
+            toggleSfx.textContent = sfxEnabled ? '🔊 SFX: ON' : '🔇 SFX: OFF';
+            toggleSfx.classList.toggle('active', sfxEnabled);
+        });
 
         const stars = [];
         
@@ -342,14 +468,51 @@
             
             if (hoveredStar) {
                 canvas.style.cursor = 'pointer';
+                
+                // Play sound only when hovering a new star
+                if (currentHoveredStar !== hoveredStar) {
+                    playHoverSound();
+                    currentHoveredStar = hoveredStar;
+                }
+                
                 tooltip.querySelector('.guru').textContent = hoveredStar.data.guru;
                 tooltip.querySelector('.saran').textContent = hoveredStar.data.saran;
-                tooltip.style.left = e.clientX + 20 + 'px';
-                tooltip.style.top = e.clientY + 20 + 'px';
+                
+                // Smart positioning to prevent tooltip from going off-screen
+                let tooltipX = e.clientX + 20;
+                let tooltipY = e.clientY + 20;
+                
+                // Get tooltip dimensions (approximate)
+                const tooltipWidth = 320; // max-width + padding
+                const tooltipHeight = 100; // approximate height
+                
+                // Check right edge
+                if (tooltipX + tooltipWidth > window.innerWidth) {
+                    tooltipX = e.clientX - tooltipWidth - 20;
+                }
+                
+                // Check bottom edge
+                if (tooltipY + tooltipHeight > window.innerHeight) {
+                    tooltipY = e.clientY - tooltipHeight - 20;
+                }
+                
+                // Check left edge
+                if (tooltipX < 0) {
+                    tooltipX = 10;
+                }
+                
+                // Check top edge
+                if (tooltipY < 0) {
+                    tooltipY = 10;
+                }
+                
+                tooltip.style.left = tooltipX + 'px';
+                tooltip.style.top = tooltipY + 'px';
                 tooltip.classList.add('show');
             } else {
                 canvas.style.cursor = 'default';
                 tooltip.classList.remove('show');
+            currentHoveredStar = null;
             }
         });
 
